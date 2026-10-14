@@ -272,9 +272,8 @@ def test_workflow_vars_appear_in_header():
     assert 'WORKFLOW2_NAME="wf2f"' in result
 
 
-def test_path_vars_come_from_data_paths_not_metadata():
-    """OUTPUT_DIR / SHARED_IN / MODULE_IN use data_paths, the same source as the module
-    binds, even if the raw metadata says something else."""
+def test_path_vars_use_data_paths_for_output_and_data_dir_for_inputs():
+    """Input roots use the workspace data layout, not configured placeholder paths."""
     data_paths = resolve_experiment_data_paths(
         {
             "output-data-location": "/apptainer/out",
@@ -284,8 +283,11 @@ def test_path_vars_come_from_data_paths_not_metadata():
     )
     result = _render(data_paths=data_paths)
     assert 'OUTPUT_DIR="/apptainer/out"' in result
-    assert 'SHARED_IN="/apptainer/shared"' in result
-    assert 'MODULE_IN="/apptainer/module"' in result
+    assert 'DATA_DIR="${WORKSPACE}/data"' in result
+    assert 'SHARED_IN="${DATA_DIR}/shared_input_data/"' in result
+    assert 'MODULE_IN="${DATA_DIR}/module_specific_input_data/"' in result
+    assert "/apptainer/shared" not in result
+    assert "/apptainer/module" not in result
     assert "/workspace/output" not in result.split("# --- Global params")[0]
 
 

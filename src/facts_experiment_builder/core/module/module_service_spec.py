@@ -417,8 +417,11 @@ class ModuleServiceSpec:
 
         return value
 
-    def _build_volumes(self) -> list[str]:
+    def _build_volumes(self, use_shell_input_paths: bool = False) -> list[str]:
         """Build volumes list from YAML configuration.
+
+        Args:
+            use_shell_input_paths: Use Apptainer shell variables for input roots.
 
         Returns:
             List of volume mount strings in format "host_path:container_path"
@@ -443,7 +446,16 @@ class ModuleServiceSpec:
             host_path = self._resolve_value(SourcePath.parse(host_path_source))
             if host_path is None:
                 continue
-            host_path = str(Path(host_path).resolve())
+            shell_input_paths = {
+                "module_inputs.input_paths.shared_input_dir": "${SHARED_IN}",
+                "module_inputs.input_paths.module_specific_input_dir": (
+                    f"${{MODULE_IN}}/{self.module_name}"
+                ),
+            }
+            if use_shell_input_paths and host_path_source in shell_input_paths:
+                host_path = shell_input_paths[host_path_source]
+            else:
+                host_path = str(Path(host_path).resolve())
             # For the output volume: mount the shared output root (parent of per-module dir)
             # so source is .../output and dest is /mnt/out; container paths use /mnt/out/<module_name>/...
             if volume_name == self.module_definition.output_volume_key():
@@ -612,7 +624,7 @@ class ModuleServiceSpec:
             ApptainerServiceSpec with all run information for this module.
         """
         args = self._build_command_args(suppress_output_types=suppress_output_types)
-        volumes = self._build_volumes()
+        volumes = self._build_volumes(use_shell_input_paths=True)
         image_url = self.components.image.image_url.rstrip("/")
         image_tag = self.components.image.image_tag
         registry, _, image_name = image_url.rpartition("/")

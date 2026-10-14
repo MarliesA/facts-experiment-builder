@@ -1,5 +1,7 @@
 """Unit tests for generate_apptainer application layer."""
 
+from pathlib import Path
+
 import pytest
 
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
@@ -29,6 +31,10 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
     ModuleOutputPaths,
 )
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    resolve_experiment_data_paths,
+)
+from facts_experiment_builder.io.write_apptainer import render_apptainer_script
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +233,55 @@ def test_generate_apptainer_service_wait_for_files_passthrough():
     files = ["/output/fair-temperature/climate.nc"]
     result = spec.generate_apptainer_service(wait_for_files=files)
     assert result.wait_for_files == files
+
+
+@pytest.mark.parametrize("module_name", ["fair-temperature", "ipccar5-glaciers"])
+def test_apptainer_input_binds_use_shell_variables(module_name):
+    spec = _make_spec_with_outputs(module_name=module_name, output_root="/output")
+    spec.module_definition.volumes = {
+        "module_specific_in": {
+            "host_path": "module_inputs.input_paths.module_specific_input_dir",
+            "container_path": "/mnt/module_specific_in",
+        },
+        "shared_in": {
+            "host_path": "module_inputs.input_paths.shared_input_dir",
+            "container_path": "/mnt/shared_in",
+        },
+        "output": {
+            "host_path": "module_inputs.output_paths.output_dir",
+            "container_path": "/mnt/out",
+        },
+    }
+    expected_binds = [
+        f"${{MODULE_IN}}/{module_name}:/mnt/module_specific_in",
+        "${SHARED_IN}:/mnt/shared_in",
+        "/output:/mnt/out",
+    ]
+    assert spec.generate_apptainer_service().binds == expected_binds
+    assert spec._build_volumes() == [
+        f"/input/{module_name}:/mnt/module_specific_in",
+        "/input/shared:/mnt/shared_in",
+        "/output:/mnt/out",
+    ]
+
+    plan = _make_execution_plan(standard_specs={module_name: spec})
+    script = render_apptainer_script(
+        stages=_build_apptainer_stages(plan),
+        execution_plan=plan,
+        metadata={},
+        data_paths=resolve_experiment_data_paths(
+            {
+                "output-data-location": "/output",
+                "shared-input-data": "/input/shared",
+                "module-specific-input-data": "/input",
+            }
+        ),
+        workspace_dir=Path("/workspace"),
+        mkdir_dirs=[f"/output/{module_name}"],
+        workflow_vars=[],
+    )
+    for bind in expected_binds:
+        assert f'"--bind={bind}"' in script
 
 
 # ---------------------------------------------------------------------------
