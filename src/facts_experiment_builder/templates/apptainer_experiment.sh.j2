@@ -11,8 +11,8 @@ WORKSPACE="{{ workspace_dir }}"
 DATA_DIR="${WORKSPACE}/data"
 EXPERIMENT_NAME="{{ experiment_name }}"
 OUTPUT_DIR="{{ output_dir }}"
-SHARED_IN="{{ shared_in }}"
-MODULE_IN="{{ module_in }}"
+SHARED_IN="${DATA_DIR}/shared_input_data/"
+MODULE_IN="${DATA_DIR}/module_specific_input_data/"
 SIF_DIR="{{ sif_dir }}"
 
 # --- Global params -----------------------------------------------------------

@@ -20,11 +20,9 @@ def _build_template_context(
     mkdir_dirs: list[str],
     workflow_vars: list[tuple[str, str]],
 ) -> dict[str, Any]:
-    # Paths come from the same ExperimentDataPaths used to build the module specs,
-    # so OUTPUT_DIR etc. always match the binds.
+    # OUTPUT_DIR comes from the same ExperimentDataPaths used to build the module
+    # specs, so it always matches the output binds.
     output_dir = data_paths.output_data_location
-    shared_in = data_paths.shared_input_data
-    module_in = data_paths.module_specific_input_base
     sif_dir = str(workspace_dir / "apptainer_experiments" / "sif")
 
     climate_wait_files: list[str] = list(
@@ -35,8 +33,6 @@ def _build_template_context(
         "workspace_dir": str(workspace_dir),
         "experiment_name": str(metadata.get("experiment_name", "")),
         "output_dir": output_dir,
-        "shared_in": shared_in,
-        "module_in": module_in,
         "sif_dir": sif_dir,
         "pyear_start": str(metadata.get("pyear_start", "")),
         "pyear_end": str(metadata.get("pyear_end", "")),
