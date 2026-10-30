@@ -181,7 +181,6 @@ def _make_execution_plan(
         standard_specs=standard_specs or {},
         facts_total_specs=facts_total_specs or {},
         esl_specs=esl_specs or {},
-        standalone_esl_specs={},
         climate_service_name=climate_service_name,
         suppress_output_types=set(),
     )
@@ -478,26 +477,8 @@ def test_compute_mkdir_dirs_deduplicates_shared_facts_total_dir():
 
 
 # ---------------------------------------------------------------------------
-# Standalone ESL (no workflows) and registry
+# Registry
 # ---------------------------------------------------------------------------
-
-
-def test_standalone_esl_specs_run_in_stage4_and_get_output_dirs():
-    esl = _make_spec("extremesealevel-pointsoverthreshold", output_dir="/output/esl")
-    plan = _ExecutionPlan(
-        standard_specs={},
-        facts_total_specs={},
-        esl_specs={},
-        standalone_esl_specs={"extremesealevel-pointsoverthreshold": esl},
-        climate_service_name=None,
-        suppress_output_types=set(),
-    )
-    stages = _build_apptainer_stages(plan)
-    assert [s.service_name for s in stages.stage4] == [
-        "extremesealevel-pointsoverthreshold"
-    ]
-    assert stages.stage4[0].run_in_background is False
-    assert "/output/esl" in _compute_mkdir_dirs(stages)
 
 
 @pytest.mark.parametrize(
